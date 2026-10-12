@@ -5,7 +5,7 @@ namespace CoffeeNChill.Models
 {
     public class FailedOrderEntity : ITableEntity
     {
-        public string PartitionKey { get; set; } = "PoisonQueue";
+        public string PartitionKey { get; set; } = "PoisonQueues";
 
         public string RowKey { get; set; } = Guid.NewGuid().ToString();
 
