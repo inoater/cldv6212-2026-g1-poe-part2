@@ -1,0 +1,1151 @@
+{
+  "info": {
+    "_postman_id": "b03299d7-6ed2-4be7-84cd-8aeffe07e953",
+    "name": "CoffeeNChill - Part 2",
+    "description": "Part 1 (menu items and staff documents) plus Part 2 (order queue, queue-triggered processing, order lifecycle and poison queue). Run the folders in order. Some requests wait before sending so the queue and timer functions can finish.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Menu Items",
+      "item": [
+        {
+          "name": "Create Menu Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201 Created\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Response contains the created item\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.Name).to.eql(\"Espresso\");",
+                  "    pm.expect(jsonData.PartitionKey).to.eql(\"Hot Drinks\");",
+                  "    pm.expect(jsonData.RowKey).to.eql(\"COF-001\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "description": "Creates a new menu item in the MenuItems table",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"PartitionKey\": \"Hot Drinks\",\n    \"RowKey\": \"COF-001\",\n    \"Name\": \"Espresso\",\n    \"Description\": \"Single shot of rich, bold espresso\",\n    \"Price\": 25.0,\n    \"IsAvailable\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Menu Items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu"
+              ]
+            },
+            "description": "Returns every menu item across all categories"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu Items By Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"All returned items belong to the requested category\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    jsonData.forEach(function (item) {",
+                  "        pm.expect(item.PartitionKey).to.eql(\"Hot Drinks\");",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/category/Hot Drinks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "category",
+                "Hot Drinks"
+              ]
+            },
+            "description": "Filters menu items by PartitionKey (category)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Menu Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Price and availability were updated\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.Price).to.eql(28.50);",
+                  "    pm.expect(jsonData.IsAvailable).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/menu/Hot Drinks/COF-001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "Hot Drinks",
+                "COF-001"
+              ]
+            },
+            "description": "Updates the price and availability of an existing menu item",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"PartitionKey\": \"Hot Drinks\",\n    \"RowKey\": \"COF-001\",\n    \"Name\": \"Espresso\",\n    \"Description\": \"Single shot of rich, bold espresso\",\n    \"Price\": 28.5,\n    \"IsAvailable\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Menu Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/Hot Drinks/COF-001",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "Hot Drinks",
+                "COF-001"
+              ]
+            },
+            "description": "Removes a menu item. Run 'Create Menu Item' again before re-running this"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Menu Item (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/Hot Drinks/DOES-NOT-EXIST",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "Hot Drinks",
+                "DOES-NOT-EXIST"
+              ]
+            },
+            "description": "Confirms deleting a non-existent item returns 404"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Staff Documents",
+      "item": [
+        {
+          "name": "Upload Staff Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "upload"
+              ]
+            },
+            "description": "Uploads a file via multipart/form-data. Attach a file under the 'file' key before sending (e.g. a barista recipe PDF)",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Staff Documents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is an array\", function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents"
+              ]
+            },
+            "description": "Lists every file stored in the staff-docs Blob container with name, size and last modified date"
+          },
+          "response": []
+        },
+        {
+          "name": "Download Staff Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/download/{{fileName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "download",
+                "{{fileName}}"
+              ]
+            },
+            "description": "Streams back the requested file. Set the 'fileName' collection variable to match a file you uploaded"
+          },
+          "response": []
+        },
+        {
+          "name": "Download Staff Document (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/documents/download/does-not-exist.pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "documents",
+                "download",
+                "does-not-exist.pdf"
+              ]
+            },
+            "description": "Confirms downloading a file that doesn't exist returns 404"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Place Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const orderId = \"ORD-2026-\" + Math.floor(100000 + Math.random() * 900000);",
+                  "pm.collectionVariables.set(\"orderId\", orderId);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 202 Accepted\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test(\"Response echoes the queued order\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.OrderId).to.eql(pm.collectionVariables.get(\"orderId\"));",
+                  "    pm.expect(jsonData.CustomerName).to.eql(\"Jane Smith\");",
+                  "    pm.expect(jsonData.SelectedItemSKUs).to.eql([\"COF-001\", \"PAS-104\"]);",
+                  "    pm.expect(jsonData.TotalPrice).to.eql(65);",
+                  "    pm.expect(jsonData.OrderTimestamp).to.be.a('string');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Validates the order, serializes it to JSON and places it on order-processing-queue. A fresh OrderId is generated before each run",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"{{orderId}}\",\n    \"CustomerName\": \"Jane Smith\",\n    \"SelectedItemSKUs\": [\n        \"COF-001\",\n        \"PAS-104\"\n    ],\n    \"TotalPrice\": 65.00,\n    \"OrderTimestamp\": \"{{$isoTimestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Generated ID and Timestamp)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 202 Accepted\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});",
+                  "",
+                  "pm.test(\"OrderId and OrderTimestamp were generated\", function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.OrderId).to.match(/^ORD-\\d{4}-[0-9A-F]{6}$/);",
+                  "    pm.expect(jsonData.OrderTimestamp).to.be.a('string').and.not.empty;",
+                  "    pm.collectionVariables.set(\"generatedOrderId\", jsonData.OrderId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Leaves out OrderId and OrderTimestamp so the producer generates both",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"CustomerName\": \"Thabo Nkosi\",\n    \"SelectedItemSKUs\": [\n        \"COF-002\"\n    ],\n    \"TotalPrice\": 32.5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Missing Customer Name)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Customer name is required\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Confirms an order without a customer name is rejected and not queued",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"ORD-2026-0001\",\n    \"CustomerName\": \"\",\n    \"SelectedItemSKUs\": [\n        \"COF-001\"\n    ],\n    \"TotalPrice\": 25.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (No Items)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"At least one item SKU is required\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Confirms an order with no item SKUs is rejected and not queued",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"ORD-2026-0002\",\n    \"CustomerName\": \"Jane Smith\",\n    \"SelectedItemSKUs\": [],\n    \"TotalPrice\": 25.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Invalid Total Price)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Total price must be greater than zero\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Confirms an order with a zero or negative total is rejected and not queued",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"ORD-2026-0003\",\n    \"CustomerName\": \"Jane Smith\",\n    \"SelectedItemSKUs\": [\n        \"COF-001\"\n    ],\n    \"TotalPrice\": -5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Invalid Order ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"Order ID cannot contain\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Confirms an OrderId containing characters that are not allowed in a table RowKey is rejected",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"ORD/2026/0004\",\n    \"CustomerName\": \"Jane Smith\",\n    \"SelectedItemSKUs\": [\n        \"COF-001\"\n    ],\n    \"TotalPrice\": 25.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Place Order (Malformed JSON)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 400 Bad Request\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Error message explains the problem\", function () {",
+                  "    pm.expect(pm.response.text()).to.include(\"valid JSON\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Confirms a malformed JSON body is rejected with 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"ORD-2026-0005\",\n    \"CustomerName\": ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Orders",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function () {}, 4000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"The queued order was written to the Orders table\", function () {",
+                  "    const orders = pm.response.json();",
+                  "    pm.expect(orders).to.be.an('array');",
+                  "    const order = orders.find(o => o.RowKey === pm.collectionVariables.get(\"orderId\"));",
+                  "    pm.expect(order, 'order is in the Orders table').to.exist;",
+                  "    pm.expect(['Received', 'Preparing', 'Ready', 'Collected']).to.include(order.Status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Returns every order in the Orders table. Waits a few seconds so the queue function can pick the order up"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By Id (Received)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Order was logged with status Received\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.RowKey).to.eql(pm.collectionVariables.get(\"orderId\"));",
+                  "    pm.expect(order.PartitionKey).to.match(/^\\d{4}-\\d{2}-\\d{2}$/);",
+                  "    pm.expect(order.CustomerName).to.eql(\"Jane Smith\");",
+                  "    pm.expect(order.SelectedItemSKUs).to.eql(\"COF-001,PAS-104\");",
+                  "    pm.expect(order.TotalPrice).to.eql(65);",
+                  "    pm.expect(order.Status).to.eql(\"Received\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Reads one order by its OrderId (RowKey) and checks the first lifecycle status"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By Id (Generated ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Order with the generated ID is in the Orders table\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.RowKey).to.eql(pm.collectionVariables.get(\"generatedOrderId\"));",
+                  "    pm.expect(order.CustomerName).to.eql(\"Thabo Nkosi\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{generatedOrderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{generatedOrderId}}"
+              ]
+            },
+            "description": "Confirms the order that was sent without an OrderId was still processed"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order By Id (Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 404 Not Found\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/ORD-DOES-NOT-EXIST",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "ORD-DOES-NOT-EXIST"
+              ]
+            },
+            "description": "Confirms asking for an order that does not exist returns 404"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Status (Preparing / Ready)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function () {}, 20000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Timer function has moved the order forward\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect([\"Preparing\", \"Ready\"]).to.include(order.Status);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Waits 20 seconds, then confirms AdvanceOrderStatus has moved the order past Received"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Order Status (Collected)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function () {}, 30000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Order completed the full lifecycle\", function () {",
+                  "    const order = pm.response.json();",
+                  "    pm.expect(order.Status).to.eql(\"Collected\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Waits 30 seconds, then confirms the order finished Received > Preparing > Ready > Collected"
+          },
+          "response": []
+        },
+        {
+          "name": "Place Duplicate Order (Poison Queue)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 202 Accepted\", function () {",
+                  "    pm.response.to.have.status(202);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/queue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "queue"
+              ]
+            },
+            "description": "Sends the same OrderId again. The producer accepts it but ProcessOrderQueue cannot insert a duplicate row, so after the retries the message moves to order-processing-queue-poison",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"OrderId\": \"{{orderId}}\",\n    \"CustomerName\": \"Jane Smith\",\n    \"SelectedItemSKUs\": [\n        \"COF-001\",\n        \"PAS-104\"\n    ],\n    \"TotalPrice\": 65.00,\n    \"OrderTimestamp\": \"{{$isoTimestamp}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Failed Orders",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(function () {}, 15000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200 OK\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Poisoned order was logged in the FailedOrders table\", function () {",
+                  "    const failed = pm.response.json();",
+                  "    pm.expect(failed).to.be.an('array');",
+                  "    const entry = failed.find(f => f.Payload.includes(pm.collectionVariables.get(\"orderId\")));",
+                  "    pm.expect(entry, 'failed order entry').to.exist;",
+                  "    pm.expect(entry.FailureReason).to.be.a('string').and.not.empty;",
+                  "    pm.expect(entry.DequeueCount).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/failed-orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "failed-orders"
+              ]
+            },
+            "description": "Waits 15 seconds for the retries and the poison queue function, then reads the FailedOrders table"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:7071/api",
+      "type": "string"
+    },
+    {
+      "key": "fileName",
+      "value": "sample-recipe.pdf",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "ORD-2026-8801",
+      "type": "string"
+    },
+    {
+      "key": "generatedOrderId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
